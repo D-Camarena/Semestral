@@ -1,0 +1,127 @@
+version: "3.6"
+
+services:
+  auto-server:
+    image: jenkins
+    container_name: sdas-auto-server
+    ports:
+      - "8080:8080"
+      - "50000:50000"
+    user: ${UID}:${GID}
+    volumes:
+      - "./jenkins:/var/jenkins_home:z"
+    networks:
+      default:
+        ipv4_address: "172.21.1.2"
+    restart: unless-stopped
+
+  git-repo:
+   image: gitea/gitea
+   container_name: sdas-git-repo
+   ports:
+     - "3000:3000"
+     - "22:22"
+   environment:
+     DB_TYPE: mysql
+     DB_HOST: 172.21.1.11:3306
+     DB_NAME: data-gitea
+     DB_USER: gitea
+     DB_PASSWD: gitea@ 
+   volumes:
+     - "./gitea:/data:z"
+   depends_on:
+     - git-db
+   networks:
+     default:
+       ipv4_address: "172.21.1.3"
+     gitint:
+       ipv4_address: "172.21.1.10"
+   restart: unless-stopped
+
+  git-db:
+   image: mariadb
+   container_name: sdas-git-db
+   environment:
+     MYSQL_ROOT_PASSWORD: sda-semestral@
+     MYSQL_USER: gitea
+     MYSQL_PASSWORD: gitea@
+     MYSQL_DATABASE: data-gitea
+   volumes:
+     - "./mariadb/gitea-db:/var/lib/mysql:z"
+   networks:
+     gitint:
+       ipv4_address: "172.21.1.11"
+   restart: unless-stopped
+  #git-redis:
+  
+  #code-insp:
+  # image: sonarqube:8.5-community
+  # container_name: sdas-code-insp
+  # ports:
+  #   - "9000:9000"
+  # environment:
+  #   SONAR_JDBC_URL: jdbc:postgresql://code-insp-db:5432/sonar
+  #   SONAR_JDBC_USERNAME: sonar
+  #   SONAR_JDBC_PASSWORD: sonar@
+  # volumes:
+  #   - "./sonarqube/data:/opt/sonarqube/data:z"
+  #   - "./sonarqube/extensions:/opt/sonarqube/extensions:z"
+  #   - "./sonarqube/logs:/opt/sonarqube/logs:z"
+  #   - "./sonarqube/bundled-plugins:/opt/sonarqube/lib/bundled-plugins"
+  # networks:
+  #   default:
+  #     ipv4_address: "172.21.1.4"
+  #   codeint:
+  #     ipv4_address: "172.21.1.18"
+  # depends_on: 
+  #   - code-insp-db
+  # restart: unless-stopped
+
+  #code-insp-db:
+  # image: postgres
+  # container_name: sdas-code-insp-db
+  # environment:
+  #   POSTGRES_PASSWORD: sonar@
+  #   POSTGRES_USER: sonar
+  #  volumes:
+  #   - "./postgresql/data:/var/lib/postgresql/data:z"
+  # networks:
+  #   codeint:
+  #     ipv4_address: "172.21.1.19"
+  # restart: unless-stopped
+
+  #  arti-repo:
+  # image: sonatype/nexus3
+  # container_name: sdas-arti-repo
+  # ports:
+  #   - "8081:8081"
+  # volumes:
+  #   - "./nexus/data:/nexus-data:z"
+  # networks:
+  #   default:
+  #     ipv4_address: "172.21.1.5"
+  # restart: unless-stopped
+  
+networks:
+  default:
+    name: sdas-default
+    driver: bridge
+    ipam:
+      config:
+        - subnet: "172.21.1.0/29"
+
+  gitint:
+    name: sdas-gitint
+    driver: bridge
+    ipam:
+      config:
+        - subnet: "172.21.1.8/29"
+    internal: true
+
+  #codeint:
+  #  name: sdas-codeint
+  # driver: bridge
+  # ipam:
+  #   config:
+  #     - subnet: "172.21.1.16/29"
+  # internal: true
